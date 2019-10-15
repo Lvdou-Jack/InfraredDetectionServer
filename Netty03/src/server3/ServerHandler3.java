@@ -17,8 +17,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 
 public class ServerHandler3 extends ChannelInboundHandlerAdapter{
 	private double temp_average = 0;
-	private double temp_max = 0;//温度最大值
-	private double temp_min = 0;//温度最小值
 	private double[] temp;//温度值
 	private double[] temp_normalization;//归一化后的灰度值
 	private ImageMesBean storage_bean;
@@ -115,16 +113,15 @@ public class ServerHandler3 extends ChannelInboundHandlerAdapter{
 		
 		//1.处理图像数据
 		//把字节数据处理为温度值数组,归一化数组
-		dealData(data);//返回值可以不要,待修改
+		dealData(data);
 		
 		try {
 			//存储对应ImageMesBean()对象到image_app目录
 			FileOutputStream app_out = new FileOutputStream(app_keep_path);
 			ObjectOutputStream app_oos = new ObjectOutputStream(app_out);
-			int[] m = new int[2];//先是max,后是min,最大值和最小值的下标
-			m = searchMaxAndMin(temp);
-			storage_bean = new ImageMesBean(temp_average, temp_normalization,m[0],m[1]);
-//			storage_bean = new ImageMesBean(temp_average, temp_normalization,temp_max,temp_min);
+			double[] maxAndMin = new double[2];//先是max,后是min,最大值和最小值的下标
+			maxAndMin = searchMaxAndMin(temp);
+			storage_bean = new ImageMesBean(temp_average, temp_normalization,maxAndMin[0],maxAndMin[1]);
 			app_oos.writeObject(storage_bean);
 			
 			app_out.close();
@@ -180,6 +177,9 @@ public class ServerHandler3 extends ChannelInboundHandlerAdapter{
 				temp_average = temp_normalization[j]+temp_average;
 				temp[j] = temp_normalization[j];//实际温度值存进数组
 				//归一化处理
+				if(temp_normalization[j]<20) {
+					temp_normalization[j] = 20.1;
+				}
 				if(temp_normalization[j]>40) {
 					temp_normalization[j] = 39.9;
 				}
@@ -197,20 +197,20 @@ public class ServerHandler3 extends ChannelInboundHandlerAdapter{
 	
 	/**
 	 * 寻找一个数组中最大值和最小值的下标*/
-	public int[] searchMaxAndMin(double[] data) {
+	public double[] searchMaxAndMin(double[] data) {
 		int length = data.length;
 		int max = 0;//最大值的下标
 		int min = 0;//最小值的下标
-		int[] m = new int[2];
+		double[] maxAndMin = new double[2];
 		for(int i = 0; i < length; i++) {
 			if(data[i] > data[max])
 				max = i;
 			if(data[i] < data[min])
 				min = i;
 		}
-		m[0] = max;
-		m[1] = min;
-		return m;
+		maxAndMin[0] = temp[max];
+		maxAndMin[1] = temp[min];
+		return maxAndMin;
 	}
 
 }
